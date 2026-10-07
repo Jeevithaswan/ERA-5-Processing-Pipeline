@@ -1,0 +1,8 @@
+rule,type,alert,first_alert,lead_days,highest,first_at_highest,days_Low,days_Moderate,days_High
+G-D02,7-day index,Yes,2020-08-08,-38,Moderate,2020-08-13,23.0,12.0,0.0
+P01,7-day index,Yes,2020-06-16,15,High,2020-06-16,37.0,31.0,166.0
+G-P01,7-day index,Yes,2020-06-16,15,High,2020-06-17,90.0,101.0,64.0
+G-P03,7-day index,Yes,2020-06-16,15,High,2020-06-16,34.0,34.0,91.0
+X-W01,event rule,Yes,2020-06-17,14,- (no levels),,,,40.0
+T09,calendar,Active,2020-08-15,-45,-,,,,
+T13,calendar,Active,2020-08-01,-31,-,,,,

@@ -1,0 +1,17 @@
+data/
+logs/
+*.nc
+*.grib
+.venv/
+__pycache__/
+*.pyc
+.cdsapirc
+.claude/
+
+# Regenerable working-output tree (run chhindwara_indices.py to rebuild) --
+# the curated deliverable snapshot lives in Chhindwara_Final_Results_1991_2026/ instead.
+chhindwara_indices/
+
+# Large reference-only files, not consumed by any pipeline code.
+reference/climate_daily_1991_2026.xlsx
+reference/climate_daily_1991_present.parquet

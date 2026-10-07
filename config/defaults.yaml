@@ -1,0 +1,67 @@
+# Defaults for things the CLI does NOT require every run (time period, location and
+# variables are supplied via CLI flags — see README.md). Everything here can still be
+# overridden with a flag where one exists.
+
+dataset: reanalysis-era5-land   # gridded, hourly, ~9km. Use reanalysis-era5-single-levels for ~31km global ERA5.
+cds_parallel: 4                 # concurrent CDS requests during download (each spends ~1-2 min queued server-side)
+
+# CDS long variable name -> short internal name used throughout the pipeline.
+# --variables on the CLI takes a comma-separated list of the short names below.
+variables:
+  2m_temperature: t2m
+  2m_dewpoint_temperature: d2m
+  total_precipitation: tp
+  10m_u_component_of_wind: u10
+  10m_v_component_of_wind: v10
+  surface_pressure: sp
+
+default_variables: [t2m, tp, u10, v10, d2m]
+
+# Daily aggregation rule per short variable name.
+aggregation:
+  t2m: [mean, max, min]
+  d2m: [mean]
+  tp: [sum]
+  u10: [mean]
+  v10: [mean]
+  sp: [mean]
+
+# WMO standard climate normal period (WMO-No. 1203, 2017).
+normals_start_year: 1991
+normals_end_year: 2020
+
+# Smoothing window (days) applied to the day-of-year normal, WMO daily-normals practice.
+normals_smoothing_window_days: 5
+
+# Degrees added around a boundary file's bounding box before download, so cells whose
+# footprint only partly overlaps the boundary are still fetched (then clipped in preprocess).
+boundary_buffer_deg: 0.15
+
+# Agromet stage thresholds (IMD/WMO conventions, matching the senior team's point-based
+# warning-system pipeline this pipeline's agromet indices were generalized from).
+rain_day_mm: 2.5                 # IMD rainy-day definition
+measurable_rain_mm_h: 0.1        # WMO measurable precipitation (hourly)
+leaf_wetness_rh_pct: 90          # RH threshold used as a leaf-wetness-duration proxy (Sentelhas et al. 2008)
+wind_driven_rain_wind_ms: 8.0    # wind speed threshold for the wind-driven-rain disease trigger
+
+# xclim indicators + agromet indicators computed by the indices stage;
+# see era5_pipeline/indices.py INDICATOR_REGISTRY.
+indices:
+  # generic ETCCDI/ECA&D climate indices
+  - tx90p
+  - tn10p
+  - frost_days
+  - summer_days
+  - tropical_nights
+  - rx1day
+  - rx5day
+  - sdii
+  - cdd
+  - cwd
+  - r95p
+  # agromet / pest-disease-warning indices
+  - rain_days
+  - leaf_wetness_hours
+  - wind_driven_rain_hours
+  - wet_spell_max
+  - dry_spell_max
