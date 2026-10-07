@@ -8,10 +8,11 @@ __pycache__/
 .cdsapirc
 .claude/
 
-# Regenerable working-output tree (run chhindwara_indices.py to rebuild) --
-# the curated deliverable snapshot lives in Chhindwara_Final_Results_1991_2026/ instead.
+# Generated outputs and run artifacts -- this repo tracks code, not results.
 chhindwara_indices/
-
-# Large reference-only files, not consumed by any pipeline code.
-reference/climate_daily_1991_2026.xlsx
-reference/climate_daily_1991_present.parquet
+Chhindwara_Final_Results_1991_2026/
+backtest/events/
+backtest/spatial/
+backtest/ALL_EVENTS_SUMMARY.csv
+backtest/Pandhurna-Backtest-RESULTS.xlsx
+reference/

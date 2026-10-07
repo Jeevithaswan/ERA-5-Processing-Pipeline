@@ -1,5 +1,0 @@
-rule,type,alert,first_alert,lead_days,highest,first_at_highest,days_Low,days_Moderate,days_High
-G-D02,7-day index,No,,,None,,0.0,0.0,0.0
-X-W01,event rule,No,,,- (no levels),,,,
-T09,calendar,Not active,,,-,,,,
-X-B01,calendar,Active,2021-07-01,4.0,-,,,,

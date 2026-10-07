@@ -1,9 +1,0 @@
-rule,year,avg_days_Low_across_Pandhurna,avg_days_Moderate_across_Pandhurna,avg_days_High_across_Pandhurna,max_days_High_anywhere_in_Pandhurna
-H01,2019,1.2,1.4,4.2,29
-H02,2019,5.3,3.3,22.3,160
-H01,2020,1.3,1.2,1.5,19
-H02,2020,7.0,7.3,22.9,197
-H01,2021,1.8,1.7,2.7,32
-H02,2021,6.3,4.8,24.2,170
-H01,2022,0.8,1.1,5.9,45
-H02,2022,5.8,4.0,22.1,157
