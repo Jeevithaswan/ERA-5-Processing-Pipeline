@@ -11,8 +11,11 @@ __pycache__/
 # Generated outputs and run artifacts -- this repo tracks code, not results.
 chhindwara_indices/
 Chhindwara_Final_Results_1991_2026/
-backtest/events/
-backtest/spatial/
-backtest/ALL_EVENTS_SUMMARY.csv
-backtest/Pandhurna-Backtest-RESULTS.xlsx
 reference/
+
+# The Pandhurna citrus disease/pest event-backtesting system (backtest.py and its
+# download scripts) is a separate project living in this same folder locally --
+# unrelated to the climatology pipeline this repo covers. era5_client.py is the
+# trimmed, disease-free extraction of the ERA5 download/PET utilities this repo
+# actually uses.
+backtest/

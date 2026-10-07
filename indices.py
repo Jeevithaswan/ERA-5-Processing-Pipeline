@@ -19,9 +19,8 @@ from matplotlib.patches import Patch
 from scipy import stats
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent / "backtest"))
 import pipeline as pl
-import backtest as bt
+import era5_client as bt
 
 FIG_DPI = 450  # bumped from 300 for dashboard embedding; same visual style otherwise
 

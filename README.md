@@ -9,7 +9,7 @@ of input variables.
 
 The pipeline has two layers:
 
-- **`pipeline.py` / `backtest.py`** — the core, place-agnostic data layer: ERA5-Land
+- **`pipeline.py` / `era5_client.py`** — the core, place-agnostic data layer: ERA5-Land
   download from the Copernicus Climate Data Store (CDS), unit conversion, hourly-to-daily
   aggregation, boundary clipping to an exact polygon (not just a bounding box), climate
   normals, anomalies, and evapotranspiration (FAO-56 Penman-Monteith).
@@ -59,13 +59,12 @@ back to the temperature-only Hargreaves (1985) approximation otherwise.
 ## Repository structure
 
 ```
-pipeline.py              Core data layer: download, preprocess, normals, anomalies
-backtest.py               ERA5-Land download/aggregation utilities, FAO-56 PET
+pipeline.py              Core data layer: region resolution, preprocess, normals, anomalies
+era5_client.py            ERA5-Land download/aggregation utilities, FAO-56 PET
 indices.py                 Drought/climate index math and figure generation (place-agnostic)
 chhindwara_indices.py       Reference implementation: full pipeline for Chhindwara district
 run_climatology.py          Generalized CLI: any place, any period, any variables/indices
 config/defaults.yaml       Variable list, aggregation rules, thresholds
-backtest/download_*.py       Example download scripts for specific regions/periods
 ```
 
 ## Setup

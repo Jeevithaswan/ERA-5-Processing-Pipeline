@@ -48,9 +48,8 @@ import pandas as pd
 import xarray as xr
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent / "backtest"))
 import pipeline as pl
-import backtest as bt
+import era5_client as bt
 import indices as idx
 
 ALL_INDICES = ["spi", "spei", "pni", "rai", "pci", "ai", "eddi", "water-balance",
