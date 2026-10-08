@@ -24,6 +24,38 @@ import era5_client as bt
 
 FIG_DPI = 450  # bumped from 300 for dashboard embedding; same visual style otherwise
 
+# =============================================================================
+# Official/government report styling -- an additive alternate palette used
+# only when a plotting function is called with official=True. The default
+# style (used everywhere else) is completely untouched by this.
+# =============================================================================
+GOV_WHITE = "#ffffff"
+GOV_NAVY = "#0f2a4a"
+GOV_NAVY_SECONDARY = "#2c4a6e"
+GOV_BAND = "#0f2a4a"
+GOV_FOOTER_GRAY = "#6b6b6b"
+GOV_BAND_HEIGHT = 0.065
+
+
+def _official_header(fig, district: str) -> None:
+    """Navy institutional header band across the top of the figure -- the one
+    visual element that distinguishes the government-report style from the
+    default research-caption style. Figure-fraction coordinates, so it scales
+    with any figsize."""
+    from matplotlib.patches import Rectangle
+    fig.patches.append(Rectangle((0, 1 - GOV_BAND_HEIGHT), 1, GOV_BAND_HEIGHT, transform=fig.transFigure,
+                                  facecolor=GOV_BAND, edgecolor="none", zorder=10))
+    fig.text(0.04, 1 - GOV_BAND_HEIGHT / 2, "GOVERNMENT OF MADHYA PRADESH", transform=fig.transFigure,
+              ha="left", va="center", fontsize=9.5, fontweight="bold", color=GOV_WHITE, zorder=11)
+    fig.text(0.97, 1 - GOV_BAND_HEIGHT / 2, f"District: {district}", transform=fig.transFigure,
+              ha="right", va="center", fontsize=9.5, color=GOV_WHITE, zorder=11)
+
+
+def _official_footer(fig) -> None:
+    fig.text(0.5, 0.01, "Source: ERA5-Land Reanalysis (Copernicus Climate Data Store) -- "
+             "methodology aligned with WMO / India Meteorological Department standards",
+             transform=fig.transFigure, ha="center", va="bottom", fontsize=7.5, color=GOV_FOOTER_GRAY)
+
 
 def savefig_retry(fig, out_file: Path, **kwargs) -> None:
     """This project's folder is OneDrive-synced, which intermittently holds a
@@ -473,8 +505,12 @@ def plot_simple_category_bars(series: pd.Series, category_series: pd.Series, ban
                                title: str, ylabel: str, baseline_note: str, out_file: Path,
                                annotate_extremes: bool = True, bar_width: int = 20,
                                subtitle: str = "", formula: str = "",
-                               clip_display: tuple[float, float] | None = None) -> None:
+                               clip_display: tuple[float, float] | None = None,
+                               official: bool = False, district: str = "Chhindwara") -> None:
     import textwrap
+    ink_primary = GOV_NAVY if official else pl.INK_PRIMARY
+    ink_secondary = GOV_NAVY_SECONDARY if official else pl.INK_SECONDARY
+    surface = GOV_WHITE if official else pl.SURFACE
     series = series.dropna()
     category_series = category_series.reindex(series.index)
 
@@ -500,11 +536,13 @@ def plot_simple_category_bars(series: pd.Series, category_series: pd.Series, ban
     n_sub_lines = wrapped_subtitle.count("\n") + 1 if wrapped_subtitle else 0
 
     formula_lines = formula.count("\n") + 1 if formula else 0
+    band_pad = GOV_BAND_HEIGHT + 0.015 if official else 0
     fig, ax = plt.subplots(figsize=(13, 6.6 + 0.22 * max(n_sub_lines - 1, 0) + 0.3 * (formula_lines > 0)),
-                            facecolor=pl.SURFACE)
-    top_margin = 0.80 - 0.04 * n_sub_lines - (0.045 if formula_lines else 0)
-    fig.subplots_adjust(top=top_margin, bottom=0.08, left=0.07, right=0.97)
+                            facecolor=surface)
+    top_margin = 0.80 - 0.04 * n_sub_lines - (0.045 if formula_lines else 0) - band_pad
+    fig.subplots_adjust(top=top_margin, bottom=0.1 if official else 0.08, left=0.07, right=0.97)
     pl._style_axes(ax)
+    ax.set_facecolor(surface)
     colors = [band_colors.get(c, pl.INK_MUTED) for c in category_series]
     ax.bar(display_series.index, display_series.values, color=colors, width=bar_width, linewidth=0)
     ax.axhline(0, color=pl.INK_MUTED, linewidth=0.9)
@@ -549,15 +587,15 @@ def plot_simple_category_bars(series: pd.Series, category_series: pd.Series, ban
             elif frac > 0.9:
                 ha, text_x = "right", d - x_nudge
             ax.annotate(label, xy=(d, display_series.loc[d]), xytext=(text_x, text_y), textcoords="data",
-                        ha=ha, va="bottom", fontsize=8.5, color=pl.INK_PRIMARY, fontweight="bold",
+                        ha=ha, va="bottom", fontsize=8.5, color=ink_primary, fontweight="bold",
                         arrowprops=dict(arrowstyle="-", color=pl.INK_MUTED, linewidth=0.8))
     else:
         ax.set_ylim(ymin - 0.12 * span, ymax + 0.32 * span)
 
-    ax.set_ylabel(ylabel, color=pl.INK_SECONDARY, fontsize=10)
-    title_y = 0.965
-    fig.suptitle(title, fontsize=14, fontweight="bold", x=0.07, ha="left", y=title_y, color=pl.INK_PRIMARY)
-    fig.text(0.07, title_y - 0.045, wrapped_subtitle, fontsize=9.5, color=pl.INK_SECONDARY, ha="left", va="top")
+    ax.set_ylabel(ylabel, color=ink_secondary, fontsize=10)
+    title_y = 0.965 - band_pad
+    fig.suptitle(title, fontsize=14, fontweight="bold", x=0.07, ha="left", y=title_y, color=ink_primary)
+    fig.text(0.07, title_y - 0.045, wrapped_subtitle, fontsize=9.5, color=ink_secondary, ha="left", va="top")
     handles = [Patch(facecolor=c, label=label) for label, c in band_colors.items()
                if label not in ("Near normal", "Normal", "")]
     if handles:
@@ -569,10 +607,13 @@ def plot_simple_category_bars(series: pd.Series, category_series: pd.Series, ban
         # just above the axes -- NOT inside the axes, since a corner placed
         # there collides with bars on any chart whose values never go
         # negative (PCI, AI, the ETCCDI extremes all have no empty corner).
-        fig.text(0.97, top_margin + 0.015, formula, fontsize=8.5, family="monospace", color=pl.INK_SECONDARY,
+        fig.text(0.97, top_margin + 0.015, formula, fontsize=8.5, family="monospace", color=ink_secondary,
                   ha="right", va="bottom",
-                  bbox=dict(facecolor=pl.SURFACE, edgecolor=pl.BASELINE, boxstyle="round,pad=0.4", alpha=0.92))
-    savefig_retry(fig, out_file, dpi=FIG_DPI, facecolor=pl.SURFACE)
+                  bbox=dict(facecolor=surface, edgecolor=pl.BASELINE, boxstyle="round,pad=0.4", alpha=0.92))
+    if official:
+        _official_header(fig, district)
+        _official_footer(fig)
+    savefig_retry(fig, out_file, dpi=FIG_DPI, facecolor=surface)
     plt.close(fig)
 
 
@@ -587,19 +628,23 @@ def _shade_drought_bands(ax, categories=DROUGHT_CATEGORIES) -> None:
 
 def plot_index_small_multiples(table: pd.DataFrame, index_prefix: str, scales: list[int], title: str,
                                 ylabel: str, baseline_note: str, out_file: Path, subtitle: str = "",
-                                formula: str = "") -> None:
+                                formula: str = "", official: bool = False, district: str = "Chhindwara") -> None:
     """Research-grade figure: one panel per accumulation scale (1/3/6/12-month),
     each with its own drought-category shading, plus a shared category legend
     and a methods footnote -- so the figure is self-explanatory on its own,
     not dependent on surrounding text."""
     import textwrap
+    ink_primary = GOV_NAVY if official else pl.INK_PRIMARY
+    ink_secondary = GOV_NAVY_SECONDARY if official else pl.INK_SECONDARY
+    surface = GOV_WHITE if official else pl.SURFACE
     full_subtitle = "One bar-width = one month of the underlying series. " + subtitle if subtitle else ""
     wrapped_subtitle = "\n".join(textwrap.wrap(full_subtitle, width=128)) if full_subtitle else ""
     n_sub_lines = wrapped_subtitle.count("\n") + 1 if wrapped_subtitle else 0
     formula_lines = formula.count("\n") + 1 if formula else 0
-    extra_h = (0.22 * n_sub_lines if subtitle else 0) + (0.35 * formula_lines if formula else 0)
+    band_pad = GOV_BAND_HEIGHT + 0.015 if official else 0
+    extra_h = (0.22 * n_sub_lines if subtitle else 0) + (0.35 * formula_lines if formula else 0) + (1.2 * band_pad if official else 0)
     fig, axes = plt.subplots(len(scales), 1, figsize=(12, 2.4 * len(scales) + 1.2 + extra_h),
-                              facecolor=pl.SURFACE, sharex=True)
+                              facecolor=surface, sharex=True)
     if len(scales) == 1:
         axes = [axes]
 
@@ -607,9 +652,10 @@ def plot_index_small_multiples(table: pd.DataFrame, index_prefix: str, scales: l
     for ax, scale in zip(axes, scales):
         col = f"{index_prefix}{scale}"
         pl._style_axes(ax)
+        ax.set_facecolor(surface)
         _shade_drought_bands(ax)
         series = table[col].dropna()
-        ax.plot(series.index, series.values, color=pl.INK_PRIMARY, linewidth=1.3)
+        ax.plot(series.index, series.values, color=ink_primary, linewidth=1.3)
         ax.fill_between(series.index, 0, series.values,
                          where=series.values >= 0, color=pl.RAIN_COLOR, alpha=0.35, linewidth=0)
         ax.fill_between(series.index, 0, series.values,
@@ -617,33 +663,36 @@ def plot_index_small_multiples(table: pd.DataFrame, index_prefix: str, scales: l
         ax.axhline(0, color=pl.INK_MUTED, linewidth=0.8)
         ax.set_ylim(-3.5, 3.5)
         scale_label = scale_labels.get(scale, f"{scale}mo")
-        ax.set_ylabel(f"{index_prefix}-{scale}\n({scale_label})", color=pl.INK_SECONDARY, fontsize=9.5, fontweight="bold")
+        ax.set_ylabel(f"{index_prefix}-{scale}\n({scale_label})", color=ink_secondary, fontsize=9.5, fontweight="bold")
 
     # Figure-level title/subtitle/legend, stacked top-to-bottom in that fixed
     # order and independent of axes[0]'s own title -- putting the title on
     # axes[0] directly (as before) let the figure-level subtitle/legend above
     # it float ABOVE the title instead of below.
-    fig.supylabel(ylabel, color=pl.INK_SECONDARY, fontsize=10)
-    title_y = 0.975
-    fig.suptitle(title, fontsize=14, fontweight="bold", x=0.08, ha="left", y=title_y, color=pl.INK_PRIMARY)
+    fig.supylabel(ylabel, color=ink_secondary, fontsize=10)
+    title_y = 0.975 - band_pad
+    fig.suptitle(title, fontsize=14, fontweight="bold", x=0.08, ha="left", y=title_y, color=ink_primary)
     cursor_y = title_y - 0.028
     if wrapped_subtitle:
-        fig.text(0.08, cursor_y, wrapped_subtitle, fontsize=9.5, color=pl.INK_SECONDARY, ha="left", va="top")
+        fig.text(0.08, cursor_y, wrapped_subtitle, fontsize=9.5, color=ink_secondary, ha="left", va="top")
         cursor_y -= 0.024 * n_sub_lines + 0.012
 
     if formula:
         cursor_y -= 0.012
-        fig.text(0.97, cursor_y, formula, fontsize=8, family="monospace", color=pl.INK_SECONDARY,
+        fig.text(0.97, cursor_y, formula, fontsize=8, family="monospace", color=ink_secondary,
                   ha="right", va="top",
-                  bbox=dict(facecolor=pl.SURFACE, edgecolor=pl.BASELINE, boxstyle="round,pad=0.4", alpha=0.92))
+                  bbox=dict(facecolor=surface, edgecolor=pl.BASELINE, boxstyle="round,pad=0.4", alpha=0.92))
         cursor_y -= 0.032 * (formula.count("\n") + 1) + 0.015
 
     handles = [Patch(facecolor=c, label=label, alpha=0.6) for label, c in _BAND_COLORS.items() if label != "Near normal"]
     fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, cursor_y), ncol=6, fontsize=8, frameon=False)
     top_rect = cursor_y - 0.045
-    fig.tight_layout(rect=(0, 0.01, 1, top_rect))
+    fig.tight_layout(rect=(0, 0.02 if official else 0.01, 1, top_rect))
 
-    savefig_retry(fig, out_file, dpi=FIG_DPI, facecolor=pl.SURFACE)
+    if official:
+        _official_header(fig, district)
+        _official_footer(fig)
+    savefig_retry(fig, out_file, dpi=FIG_DPI, facecolor=surface)
     plt.close(fig)
 
 
@@ -705,13 +754,18 @@ def plot_decile_timeseries(table: pd.DataFrame, title: str, baseline_note: str, 
 
 
 def plot_spatial_anomaly_map(da: xr.DataArray, title: str, cbar_label: str, region: pl.Region, out_file: Path,
-                              hot_is_red: bool = False, baseline_note: str = "", subtitle: str = "") -> None:
+                              hot_is_red: bool = False, baseline_note: str = "", subtitle: str = "",
+                              official: bool = False, district: str = "Chhindwara") -> None:
     """hot_is_red=True for temperature (conventional: red=hot, blue=cold);
     False for precipitation (conventional: red=dry/below normal, blue=wet/above normal,
     i.e. negative values red, positive blue -- the opposite sense of temperature)."""
     import textwrap
     from matplotlib.colors import TwoSlopeNorm
 
+    ink_primary = GOV_NAVY if official else pl.INK_PRIMARY
+    ink_secondary = GOV_NAVY_SECONDARY if official else pl.INK_SECONDARY
+    surface = GOV_WHITE if official else pl.SURFACE
+    band_pad = GOV_BAND_HEIGHT + 0.015 if official else 0
     x_dim = "longitude" if "longitude" in da.dims else "lon"
     y_dim = "latitude" if "latitude" in da.dims else "lat"
     vmax = float(np.nanmax(np.abs(da.values))) or 1.0
@@ -720,39 +774,43 @@ def plot_spatial_anomaly_map(da: xr.DataArray, title: str, cbar_label: str, regi
 
     # Wide enough that a long title never overflows the right edge (the earlier
     # 7in-wide figure clipped titles like "...2006-02) -- Chhindwara").
-    fig, ax = plt.subplots(figsize=(9.5, 7.2), facecolor=pl.SURFACE)
-    ax.set_facecolor(pl.SURFACE)
+    fig, ax = plt.subplots(figsize=(9.5, 7.2), facecolor=surface)
+    ax.set_facecolor(surface)
     mesh = ax.pcolormesh(da[x_dim], da[y_dim], da.values, cmap=cmap, norm=norm, shading="auto")
     ax.set_aspect("equal")
     ax.grid(True, color=pl.GRIDLINE, linewidth=0.5, alpha=0.6, zorder=0)
     cbar = fig.colorbar(mesh, ax=ax, shrink=0.85, pad=0.03)
     cbar.outline.set_visible(False)
     cbar.ax.tick_params(colors=pl.INK_MUTED, labelsize=9)
-    cbar.set_label(cbar_label, color=pl.INK_SECONDARY, fontsize=9)
+    cbar.set_label(cbar_label, color=ink_secondary, fontsize=9)
 
     if region.polygon is not None:
         xs, ys = region.polygon.exterior.xy
-        ax.plot(xs, ys, color=pl.INK_PRIMARY, linewidth=1.8)
+        ax.plot(xs, ys, color=ink_primary, linewidth=1.8)
 
     mean_val = float(np.nanmean(da.values))
     stats_box = f"District average: {mean_val:+.1f}\nRange: {float(np.nanmin(da.values)):+.1f} to {float(np.nanmax(da.values)):+.1f}"
     ax.text(0.02, 0.02, stats_box, transform=ax.transAxes, ha="left", va="bottom", fontsize=9,
-             color=pl.INK_SECONDARY, bbox=dict(facecolor=pl.SURFACE, edgecolor=pl.BASELINE, boxstyle="round,pad=0.4"))
+             color=ink_secondary, bbox=dict(facecolor=surface, edgecolor=pl.BASELINE, boxstyle="round,pad=0.4"))
 
     wrapped_title = "\n".join(textwrap.wrap(title, width=48))
-    fig.suptitle(wrapped_title, fontsize=13, fontweight="bold", x=0.06, ha="left", y=0.98, color=pl.INK_PRIMARY)
-    subtitle_y = 0.98 - 0.045 * (wrapped_title.count("\n") + 1) - 0.015
+    title_y = 0.98 - band_pad
+    fig.suptitle(wrapped_title, fontsize=13, fontweight="bold", x=0.06, ha="left", y=title_y, color=ink_primary)
+    subtitle_y = title_y - 0.045 * (wrapped_title.count("\n") + 1) - 0.015
     if subtitle:
         wrapped_sub = "\n".join(textwrap.wrap(subtitle, width=75))
-        fig.text(0.06, subtitle_y, wrapped_sub, fontsize=9.5, color=pl.INK_SECONDARY, ha="left", va="top")
+        fig.text(0.06, subtitle_y, wrapped_sub, fontsize=9.5, color=ink_secondary, ha="left", va="top")
         top_rect = subtitle_y - 0.03 * (wrapped_sub.count("\n") + 1)
     else:
         top_rect = subtitle_y
-    ax.set_xlabel("longitude", color=pl.INK_SECONDARY, fontsize=9)
-    ax.set_ylabel("latitude", color=pl.INK_SECONDARY, fontsize=9)
+    ax.set_xlabel("longitude", color=ink_secondary, fontsize=9)
+    ax.set_ylabel("latitude", color=ink_secondary, fontsize=9)
     ax.tick_params(colors=pl.INK_MUTED, labelsize=8)
     for spine in ax.spines.values():
         spine.set_visible(False)
-    fig.tight_layout(rect=(0, 0, 1, max(top_rect, 0.6)))
-    savefig_retry(fig, out_file, dpi=FIG_DPI, facecolor=pl.SURFACE)
+    fig.tight_layout(rect=(0, 0.02 if official else 0, 1, max(top_rect, 0.6)))
+    if official:
+        _official_header(fig, district)
+        _official_footer(fig)
+    savefig_retry(fig, out_file, dpi=FIG_DPI, facecolor=surface)
     plt.close(fig)
